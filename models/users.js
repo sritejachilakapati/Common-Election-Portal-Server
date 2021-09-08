@@ -45,13 +45,6 @@ const userSchema = new Schema({
   totalVotes: {
     type: Number,
     default: 0
-  },
-  admin: {
-    type: Boolean,
-    default: false
-  },
-  adminID: {
-    type: String
   }
 }, {
   timestamps: true
