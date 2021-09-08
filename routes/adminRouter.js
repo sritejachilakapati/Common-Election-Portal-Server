@@ -60,7 +60,7 @@ adminRouter.route('/')
 .delete(authenticate.verifyAdmin, (req, res, next) => {
   Admins.findByIdAndRemove(req.user.id)
   .then(admin => {
-    res.json(admin);
+    res.json({success: true, admin: admin});
   }, err => next(err))
   .catch(err => next(err));
 });

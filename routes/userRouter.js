@@ -86,7 +86,7 @@ userRouter.route('/')
 .delete(authenticate.verifyUser, (req, res, next) => {
   Users.findByIdAndRemove(req.user.id)
   .then(user => {
-    res.json(user);
+    res.json({success: true, user: user});
   }, err => next(err))
   .catch(err => next(err));
 });
@@ -118,89 +118,6 @@ userRouter.route('/login')
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   res.json({ success: true, token: token });
-});
-
-userRouter.route('/application')
-.all((req, res, next) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'application/json');
-  next();
-})
-.get((req, res, next) => {
-  Users.find({isCandidate: true})
-  .then(users => {
-    res.json(users);
-  }, err => next(err))
-  .catch(err => next(err));
-})
-.post(authenticate.verifyUser, (req, res, next) => {
-  Users.findById(req.user.id)
-  .then(user => {
-    if(user.isCandidate) {
-      user.populate('position')
-      .then(popUser => {
-        res.statusCode = 500;
-        res.json({
-          success: false,
-          err: {
-            name: 'UserExistsError',
-            message: 'The user has already applied for a position',
-            position: popUser.position
-          }
-        });
-      }, err => next(err))
-      .catch(err => next(err))
-    }
-    else {
-      user.position = req.body.position;
-      user.isCandidate = true;
-      user.totalVotes = 0;
-      user.save()
-      .then(user => {
-        res.json(user);
-      }, err => next(err))
-      .catch(err => next(err));
-    }
-  }, err => next(err))
-  .catch(err => next(err));
-})
-.put(authenticate.verifyUser, (req, res, next) => {
-  Users.findOneAndUpdate({_id: req.user.id, isCandidate: true}, { position: req.body.position, totalVotes: 0 }, { new: true })
-  .then(user => {
-    if(user === null) {
-      res.statusCode = 404;
-      res.json({
-        success: false,
-        err: {
-          name: 'NotFoundError',
-          message: 'The user hasn\'t applied for a position'
-        }
-      });
-    }
-    else {
-      res.json(user);
-    }
-  }, err => next(err))
-  .catch(err => next(err));
-})
-.delete(authenticate.verifyUser, (req, res, next) => {
-  Users.findOneAndUpdate({_id: req.user.id, isCandidate: true}, { $set: { isCandidate: false, totalVotes: 0 }, $unset: { position: 1 }}, { new: true })
-  .then(user => {
-    if(user === null) {
-      res.statusCode = 404;
-      res.json({
-        success: false,
-        err: {
-          name: 'NotFoundError',
-          message: 'The user hasn\'t applied for a position'
-        }
-      });
-    }
-    else {
-      res.json(user);
-    }
-  }, err => next(err))
-  .catch(err => next(err));
 });
 
 module.exports = userRouter;

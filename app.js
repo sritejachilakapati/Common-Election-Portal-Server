@@ -8,11 +8,13 @@ var { conn } = require('./connect');
 var autoIncrement = require('mongoose-auto-increment');
 
 autoIncrement.initialize(conn);
-console.log('Connected to DB successfully');
+console.log('Server running');
 
 var indexRouter = require('./routes/indexRouter');
 var userRouter = require('./routes/userRouter');
 const adminRouter = require('./routes/adminRouter');
+const positionRouter = require('./routes/positionRouter');
+const applicationRouter = require('./routes/applicationRouter');
 
 var app = express();
 
@@ -31,6 +33,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/users', userRouter);
 app.use('/admins', adminRouter);
+app.use('/positions', positionRouter);
+app.use('/applications', applicationRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
