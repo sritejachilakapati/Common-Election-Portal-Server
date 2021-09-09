@@ -42,6 +42,10 @@ const userSchema = new Schema({
     type: Boolean,
     default: false
   },
+  votedForPos: {
+    type: Array,
+    default: []
+  },
   totalVotes: {
     type: Number,
     default: 0
