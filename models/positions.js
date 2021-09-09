@@ -21,12 +21,6 @@ const positionSchema = new Schema({
     type: Number,
     min: 0,
     default: 0
-  },
-  openDate: {
-    type: Date
-  },
-  closeDate: {
-    type: Date
   }
 }, {
   timestamps: true

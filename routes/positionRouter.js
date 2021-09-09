@@ -45,7 +45,19 @@ positionRouter.route('/id/:posID')
 .get((req, res, next) => {
   Positions.find({posID: req.params.posID})
   .then(position => {
-    res.json(position);
+    if(position === null) {
+      res.statusCode = 404;
+      res.json({
+        success: false,
+        err: {
+          name: 'NotFoundError',
+          message: 'The position ' + req.params.posID + 'is not found'
+        }
+      });
+    }
+    else {
+      res.json(position);
+    }
   }, err => next(err))
   .catch(err => next(err));
 })
