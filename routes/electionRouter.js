@@ -13,12 +13,13 @@ electionRouter.route('/')
 })
 .get((req, res, next) => {
 
+  var currDate = new Date();
+
   const getElections = () => {
     if(req.body.active) {
-      var currDate = new Date();
       return Elections.find({
         startDate: {
-          $lt: currDate
+          $lte: currDate
         },
         endDate: {
           $gte: currDate
@@ -49,29 +50,43 @@ electionRouter.route('/')
   .catch(err => next(err));
 })
 .post(authenticate.verifyAdmin, (req, res, next) => {
-  var newElection = {
-    startDate: req.body.startDate,
-    endDate: req.body.endDate,
-    totalVotesPolled: []
+  var nextDate = new Date();
+  nextDate.setDate(nextDate.getDate() + 1);
+  let startDateObj = new Date(req.body.startDate);
+  let endDateObj = new Date(req.body.endDate);
+
+  let pastStart = startDateObj.getTime() <= nextDate.getTime();
+  let pastEnd = endDateObj.getTime() <= nextDate.getTime();
+  let endBeforeStart = endDateObj.getTime() <= startDateObj.getTime();
+
+  if (pastStart || pastEnd || endBeforeStart) {
+    res.sendStatus(400);
   }
-  Elections.create(newElection)
-  .then(election => {
-    Positions.find({posID: { $in: req.body.positions }}, 'id')
-    .then(positions => {
-      positions.forEach(pos => {
-        let voteObj = {
-          position: pos.id,
-          votes: 0
-        }
-        election.totalVotesPolled.addToSet(voteObj);
-      });
-      return election.save();
-    })
+  else {
+    var newElection = {
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
+      totalVotesPolled: []
+    }
+    Elections.create(newElection)
     .then(election => {
-      res.json({ success: true, election: election });
-    }, err => next(err))
-  }, err => next(err))     
-  .catch(err => next(err));
+      Positions.find({posID: { $in: req.body.positions }}, 'id')
+      .then(positions => {
+        positions.forEach(pos => {
+          let voteObj = {
+            position: pos.id,
+            votes: 0
+          }
+          election.totalVotesPolled.addToSet(voteObj);
+        });
+        return election.save();
+      })
+      .then(election => {
+        res.json({ success: true, election: election });
+      }, err => next(err))
+    }, err => next(err))     
+    .catch(err => next(err));
+  }
 })
 .delete(authenticate.verifyAdmin, (req, res, next) => {
   Elections.deleteMany({})

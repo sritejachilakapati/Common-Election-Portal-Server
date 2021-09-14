@@ -4,6 +4,7 @@ var applicationRouter = express.Router();
 
 const Users = require('../models/users');
 const Positions = require('../models/positions');
+const Elections = require('../models/elections');
 
 applicationRouter.route('/')
 .all((req, res, next) => {
@@ -13,7 +14,8 @@ applicationRouter.route('/')
 })
 .get((req, res, next) => {
   Users.find({isCandidate: true})
-  .populate('position')
+  .populate('candidateDetails.election')
+  .populate('candidateDetails.position')
   .then(users => {
     res.json(users);
   }, err => next(err))
@@ -23,7 +25,7 @@ applicationRouter.route('/')
   Users.findById(req.user.id)
   .then(user => {
     if(user.isCandidate) {
-      user.populate('position')
+      user.populate('candidateDetails.position')
       .then(popUser => {
         res.statusCode = 500;
         res.json({
@@ -31,14 +33,29 @@ applicationRouter.route('/')
           err: {
             name: 'UserExistsError',
             message: 'The user has already applied for a position',
-            position: popUser.position
+            position: popUser.candidateDetails.position
           }
         });
       }, err => next(err))
       .catch(err => next(err))
     }
     else {
-      Positions.findOne({posID: req.body.posID})
+      Elections.findById(req.body.election)
+      .then(election => {
+        if(election === null) {
+          res.statusCode = 404;
+          res.json({
+            success: false,
+            err: {
+              name: 'NotFoundError',
+              message: 'The specified election is not found'
+            }
+          });
+        }
+        else {
+          return Positions.findOne({posID: req.body.posID})
+        }
+      }, err => next(err))
       .then(position => {
         if(position === null) {
           res.statusCode = 404;
@@ -54,56 +71,99 @@ applicationRouter.route('/')
           position.candidateCount += 1;
           position.save()
           .then(() => {
-            user.position = position.id;
+            var candidateDetails = {
+              election: req.body.election,
+              position: position.id,
+              totalVotes: 0
+            }
+            user.candidateDetails = candidateDetails;
             user.isCandidate = true;
-            user.totalVotes = 0;
-            user.save()
-            .then(user => {
-              res.json({
-                success: true,
-                user: user
-              });
-            }, err => next(err));
-          }, err => next(err));
+            return user.save()
+          }, err => next(err))
+          .then(user => {
+            res.json({
+              success: true,
+              user: user
+            });
+          }, err => next(err))
+          .catch(err => next(err));
         }
-      })
+      }, err => next(err))
       .catch(err => next(err));
     }
   }, err => next(err))
   .catch(err => next(err));
 })
 .put(authenticate.verifyUser, (req, res, next) => {
-  Users.findOne({_id: req.user.id, isCandidate: true})
+  Users.findById(req.user.id)
   .then(user => {
-    if(user === null) {
+    if(!user.isCandidate) {
       res.statusCode = 404;
       res.json({
         success: false,
         err: {
           name: 'NotFoundError',
-          message: 'The user hasn\'t applied for a position'
+          message: 'The user hasn\'t applied for any position'
         }
       });
     }
     else {
-      Positions.findById(user.position)
-      .then(oldPosition => {
-        oldPosition.candidateCount -= 1;
-        return oldPosition.save();
-      })
+      Positions.findById(user.candidateDetails.position)
+      .then(oldPos => {
+        oldPos.candidateCount -= 1;
+        return oldPos.save();
+      }, err => next(err))
       .then(() => {
-        Positions.findOne({posID: req.body.posID})
-        .then(newPosition => {
-          newPosition.candidateCount += 1;
-          return newPosition.save();
-        })
-        .then(newPosition => {
-          user.updateOne({ position: newPosition.id })
-          .then(resp => {
-            res.json(resp);
-          }, err => next(err));
-        });
-      }, err => next(err));
+        Elections.findById(req.body.election)
+        .then(election => {
+          if(election === null) {
+            res.statusCode = 404;
+            res.json({
+              success: false,
+              err: {
+                name: 'NotFoundError',
+                message: 'The specified election is not found'
+              }
+            });
+          }
+          else {
+            return Positions.findOne({posID: req.body.posID})
+          }
+        }, err => next(err))
+        .then(newPos => {
+          if(newPos === null) {
+            res.statusCode = 404;
+            res.json({
+              success: false,
+              err: {
+                name: 'NotFoundError',
+                message: 'The specified position is not found'
+              }
+            });
+          }
+          else {
+            newPos.candidateCount += 1;
+            newPos.save()
+            .then(() => {
+              var candidateDetails = {
+                election: req.body.election,
+                position: newPos.id,
+                totalVotes: 0
+              }
+              user.candidateDetails = candidateDetails;
+              return user.save()
+            }, err => next(err))
+            .then(user => {
+              res.json({
+                success: true,
+                user: user
+              });
+            }, err => next(err))
+            .catch(err => next(err));
+          }
+        }, err => next(err))
+        .catch(err => next(err));
+      })
     }
   }, err => next(err))
   .catch(err => next(err));
@@ -122,13 +182,13 @@ applicationRouter.route('/')
       });
     }
     else {
-      Positions.findById(user.position)
+      Positions.findById(user.candidateDetails.position)
       .then(position => {
         position.candidateCount -= 1;
         return position.save();
       })
       .then(() => {
-        user.updateOne({ $set: { isCandidate: false, totalVotes: 0 }, $unset: { position: 1 }})
+        user.updateOne({ $set: { isCandidate: false }, $unset: { candidateDetails: 1 }})
         .then(resp => {
           res.json(resp);
         }, err => next(err));

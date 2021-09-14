@@ -34,9 +34,19 @@ const userSchema = new Schema({
     type: Boolean,
     default: false
   },
-  position: {
-    type: Schema.Types.ObjectId,
-    ref: 'Position'
+  candidateDetails: {
+    election: {
+      type: Schema.Types.ObjectId,
+      ref: 'Election'
+    },
+    position: {
+      type: Schema.Types.ObjectId,
+      ref: 'Position'
+    },
+    totalVotes: {
+      type: Number,
+      default: 0
+    }
   },
   hasVoted: {
     type: Boolean,
@@ -45,10 +55,6 @@ const userSchema = new Schema({
   votedForPos: {
     type: Array,
     default: []
-  },
-  totalVotes: {
-    type: Number,
-    default: 0
   }
 }, {
   timestamps: true
