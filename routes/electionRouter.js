@@ -78,6 +78,10 @@ electionRouter.route('/')
     .catch(err => next(err));
   }
 })
+.put((req, res, next) => {
+  res.setHeader('Allow', 'GET, POST, DELETE');
+  res.sendStatus(405);
+})
 .delete(authenticate.verifyAdmin, (req, res, next) => {
   Users.updateMany({isCandidate: true}, { $unset: { candidateDetails: 1 }})
   .then(() => {
@@ -116,6 +120,10 @@ electionRouter.route('/id/:election')
     }
   }, err => next(err))
   .catch(err => next(err));
+})
+.post((req, res, next) => {
+  res.setHeader('Allow', 'GET, PUT, DELETE');
+  res.sendStatus(405);
 })
 .put(authenticate.verifyAdmin, (req, res, next) => {
   Elections.findById(req.params.election)

@@ -108,6 +108,14 @@ voteRouter.route('/')
     }
   }, err => next(err))
   .catch(err => next(err));
+})
+.put((req, res, next) => {
+  res.setHeader('Allow', 'GET, POST');
+  res.sendStatus(405);
+})
+.delete((req, res, next) => {
+  res.setHeader('Allow', 'GET, POST');
+  res.sendStatus(405);
 });
 
 voteRouter.route('/declare')
@@ -115,6 +123,10 @@ voteRouter.route('/declare')
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   next();
+})
+.get((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
 })
 .post(authenticate.verifyAdmin, (req, res, next) => {
   Elections.findById(req.body.election)
@@ -193,6 +205,14 @@ voteRouter.route('/declare')
     .catch(err => next(err));
   }, err => next(err))
   .catch(err => next(err));
+})
+.put((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
+})
+.delete((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
 });
 
 module.exports = voteRouter;

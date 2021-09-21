@@ -92,6 +92,11 @@ userRouter.route('/')
 });
 
 userRouter.route('/id/:voterID')
+.all((req, res, next) => {
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'application/json');
+  next();
+})
 .get((req, res, next) => {
   Users.findOne({voterID: req.params.voterID})
   .then(user => {
@@ -110,14 +115,38 @@ userRouter.route('/id/:voterID')
     }
   }, err => next(err))
   .catch(err => next(err));
+})
+.post((req, res, next) => {
+  res.setHeader('Allow', 'GET');
+  res.sendStatus(405);
+})
+.put((req, res, next) => {
+  res.setHeader('Allow', 'GET');
+  res.sendStatus(405);
+})
+.delete((req, res, next) => {
+  res.setHeader('Allow', 'GET');
+  res.sendStatus(405);
 });
 
 userRouter.route('/login')
+.get((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
+})
 .post(passport.authenticate('user-local'), (req, res, next) => {
   var token = authenticate.getToken({_id: req.user.id});
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   res.json({ success: true, token: token });
+})
+.put((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
+})
+.delete((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
 });
 
 module.exports = userRouter;

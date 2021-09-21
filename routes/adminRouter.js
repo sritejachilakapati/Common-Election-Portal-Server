@@ -66,11 +66,23 @@ adminRouter.route('/')
 });
 
 adminRouter.route('/login')
+.get((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
+})
 .post(passport.authenticate('admin-local'), (req, res, next) => {
   var token = authenticate.getToken({_id: req.user.id});
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   res.json({ success: true, token: token });
-});
+})
+.put((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
+})
+.delete((req, res, next) => {
+  res.setHeader('Allow', 'POST');
+  res.sendStatus(405);
+})
 
 module.exports = adminRouter;
