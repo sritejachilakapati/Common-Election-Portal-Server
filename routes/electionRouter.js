@@ -4,6 +4,7 @@ var electionRouter = express.Router();
 
 const Elections = require('../models/elections');
 const Positions = require('../models/positions');
+const Users = require('../models/users');
 
 electionRouter.route('/')
 .all((req, res, next) => {
@@ -27,26 +28,14 @@ electionRouter.route('/')
       })
     }
     else {
-      return Elections.find()
+      return Elections.find({})
     }
   }
 
   getElections()
   .then(elections => {
-    if (elections === null) {
-      res.statusCode = 404;
-      res.json({
-        success: false,
-        err: {
-          name: 'NotFoundError',
-          message: 'No election campaign is active currently'
-        }
-      });
-    }
-    else {
       res.json(elections);
-    }
-  }, err => next(err))
+    }, err => next(err))
   .catch(err => next(err));
 })
 .post(authenticate.verifyAdmin, (req, res, next) => {
@@ -66,7 +55,7 @@ electionRouter.route('/')
     var newElection = {
       startDate: req.body.startDate,
       endDate: req.body.endDate,
-      totalVotesPolled: []
+      voteDetails: []
     }
     Elections.create(newElection)
     .then(election => {
@@ -75,9 +64,10 @@ electionRouter.route('/')
         positions.forEach(pos => {
           let voteObj = {
             position: pos.id,
-            votes: 0
+            votes: 0,
+            votedUsers: []
           }
-          election.totalVotesPolled.addToSet(voteObj);
+          election.voteDetails.addToSet(voteObj);
         });
         return election.save();
       })
@@ -89,21 +79,27 @@ electionRouter.route('/')
   }
 })
 .delete(authenticate.verifyAdmin, (req, res, next) => {
-  Elections.deleteMany({})
+  Users.updateMany({isCandidate: true}, { $unset: { candidateDetails: 1 }})
+  .then(() => {
+    return Positions.updateMany({}, {candidateCount: 0});
+  })
+  .then(() => {
+    return Elections.deleteMany({});
+  })
   .then(resp => {
     res.json(resp)
   }, err => next(err))
   .catch(err => next(err));
 });
 
-electionRouter.route('/id/:electionID')
+electionRouter.route('/id/:election')
 .all((req, res, next) => {
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   next();
 })
 .get((req, res, next) => {
-  Elections.findById(req.params.electionID)
+  Elections.findById(req.params.election)
   .then(election => {
     if (election === null) {
       res.statusCode = 404;
@@ -111,7 +107,7 @@ electionRouter.route('/id/:electionID')
         success: false,
         err: {
           name: 'NotFoundError',
-          message: 'The election ' + req.params.electionID + 'is not found'
+          message: 'The election ' + req.params.election + 'is not found'
         }
       });
     }
@@ -122,16 +118,19 @@ electionRouter.route('/id/:electionID')
   .catch(err => next(err));
 })
 .put(authenticate.verifyAdmin, (req, res, next) => {
-  Elections.findById(req.params.electionID)
+  Elections.findById(req.params.election)
   .then(election => {
+    if (req.body.startDate) election.startDate = req.body.startDate;
+    if (req.body.endDate) election.endDate = req.body.endDate;
     Positions.find({posID: { $in: req.body.add }}, 'id')
     .then(positions => {
       positions.forEach(pos => {
         let voteObj = {
           position: pos.id,
-          votes: 0
+          votes: 0,
+          votedUsers: []
         }
-        election.totalVotesPolled.addToSet(voteObj);
+        election.voteDetails.addToSet(voteObj);
       });
       return election.save();
     })
@@ -141,9 +140,10 @@ electionRouter.route('/id/:electionID')
         positions.forEach(pos => {
           let voteObj = {
             position: pos.id,
-            votes: 0
+            votes: 0,
+            votedUsers: []
           }
-          election.totalVotesPolled.pull(voteObj);
+          election.voteDetails.pull(voteObj);
         });
         return election.save();
       }, err => next(err))
@@ -155,9 +155,23 @@ electionRouter.route('/id/:electionID')
   .catch(err => next(err));
 })
 .delete(authenticate.verifyAdmin, (req, res, next) => {
-  Elections.findByIdAndDelete(req.params.electionID)
+  Users.updateMany({
+    isCandidate: true,
+    'candidateDetails.election': req.params.election
+  },{ 
+    $set: { isCandidate: false },
+    $unset: { candidateDetails: 1 }
+  })
+  .then(() => {
+    return Elections.findByIdAndDelete(req.params.election)
+  })
   .then(election => {
-    res.json(election);
+    election.voteDetails.forEach(detail => {
+      Positions.findByIdAndUpdate(detail.position, { candidateCount: 0 })
+      .then(() => {
+        res.json(election);
+      }, err => next(err))
+    })
   }, err => next(err))
   .catch(err => next(err));
 });

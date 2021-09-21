@@ -10,7 +10,11 @@ const votesSchema = new Schema ({
   votes: {
     type: Number,
     default: 0
-  }
+  },
+  votedUsers: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {_id: false });
 
 const electionSchema = new Schema({
@@ -22,7 +26,11 @@ const electionSchema = new Schema({
     type: Date,
     required: true
   },
-  totalVotesPolled: [votesSchema]
+  voteDetails: [votesSchema],
+  resultDeclared: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });

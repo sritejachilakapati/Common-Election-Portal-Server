@@ -47,14 +47,6 @@ const userSchema = new Schema({
       type: Number,
       default: 0
     }
-  },
-  hasVoted: {
-    type: Boolean,
-    default: false
-  },
-  votedForPos: {
-    type: Array,
-    default: []
   }
 }, {
   timestamps: true
